@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+### This file is provisioned by ansible-control ###
+### All changes directly to this file will be reverted ###
+
+iptables -F DOCKER-USER
+iptables -A DOCKER-USER -j RETURN
+echo "Docker-friendly firewall :: flushed D-U-chain"
+
+iptables -F INPUT
+echo "Docker-friendly firewall :: flushed INPUT-chain"
+
+iptables -F DFF-STAGE-0
+iptables -X DFF-STAGE-0
+
+iptables -F DFF-STAGE-1
+iptables -X DFF-STAGE-1
+echo "Docker-friendly firewall :: flushed and dropped stage-X-chains"
+
+iptables -P INPUT ACCEPT
+echo "Docker-friendly firewall :: accepted everything in INPUT"
+
+iptables -X $MARKER_CHAIN_NAME
+echo "Docker-friendly firewall :: dropped marker-chain"

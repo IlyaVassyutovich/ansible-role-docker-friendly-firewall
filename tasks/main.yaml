@@ -1,0 +1,19 @@
+- name: Hello!
+  debug:
+    msg: Hello from docker-friendly firewall!
+
+- name: Verify rules
+  assert:
+    that:
+      - item.proto == "tcp" or item.proto == "udp"
+      - 0 < item.dport and item.dport < 65536
+      - item.name is regex("^[a-zA-Z \\-,.\']+$")
+  loop: "{{ docker.firewall.rules }}"
+
+- name: Configure DFF facts
+  set_fact:
+    dff: "{{ dff_defaults | combine(docker.firewall | default({})) }}"
+
+- name: Setup DFF
+  become: true
+  include: setup_firewall.yaml

@@ -1,0 +1,4 @@
+dff_defaults:
+  marker_chain_name: __DFF-MARKER-CHAIN
+  primary_interface: enp1s0
+  log_dropped_rejected: true

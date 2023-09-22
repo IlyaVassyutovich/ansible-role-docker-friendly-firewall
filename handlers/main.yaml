@@ -1,0 +1,6 @@
+- name: Restart DFF
+  become: true
+  ansible.builtin.service:
+    name: docker-friendly-firewall.service
+    state: restarted
+  listen: Restart DFF

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+### This file is provisioned by ansible-control ###
+### All changes directly to this file will be reverted ###
+
+set -e
+
+
+iptables -N $MARKER_CHAIN_NAME
+echo "Docker-friendly firewall :: created marker-chain"
+echo "Docker-friendly firewall :: configured successfully"

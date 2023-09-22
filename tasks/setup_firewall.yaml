@@ -1,0 +1,45 @@
+- name: Render DFF-unit file
+  ansible.builtin.template:
+    src: service.j2
+    dest: /etc/systemd/system/docker-friendly-firewall.service
+    owner: root
+    group: root
+    mode: "0444"
+  notify: Restart DFF
+  register: render_unit
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: render_unit.changed
+
+- name: Enable DFF
+  ansible.builtin.service:
+    name: docker-friendly-firewall.service
+    enabled: true
+
+- name: Configure DFF-directory
+  ansible.builtin.file:
+    path: /opt/docker-friendly-firewall
+    state: directory
+    owner: root
+    group: root
+    mode: "0555"
+
+- name: Render DFF-scripts
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0555"
+  loop:
+    - src: iptables-start-pre.bash.j2
+      dest: /opt/docker-friendly-firewall/iptables-start-pre.bash
+    - src: iptables-start.bash.j2
+      dest: /opt/docker-friendly-firewall/iptables-start.bash
+    - src: iptables-start-post.bash.j2
+      dest: /opt/docker-friendly-firewall/iptables-start-post.bash
+    - src: iptables-stop.bash.j2
+      dest: /opt/docker-friendly-firewall/iptables-stop.bash
+  notify: Restart DFF

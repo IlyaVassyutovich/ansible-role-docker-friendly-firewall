@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+### This file is provisioned by ansible-control ###
+### All changes directly to this file will be reverted ###
+
+set -e
+
+
+MARKER_CHAINS_COUNT=$(iptables-save | grep --word-regexp --extended-regexp --count "^:($MARKER_CHAIN_NAME)" || true)
+if [[ $MARKER_CHAINS_COUNT -ne 0 ]]; then
+    echo "Docker-friendly firewall :: already configured"
+    exit 42
+fi
+echo "Docker-friendly firewall :: configuring iptables..."

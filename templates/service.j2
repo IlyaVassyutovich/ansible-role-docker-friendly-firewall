@@ -1,0 +1,22 @@
+### This file is provisioned by ansible-control ###
+### All changes directly to this file will be reverted ###
+
+[Unit]
+Description=Docker-friendly firewall
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+
+Environment="MARKER_CHAIN_NAME={{ dff_defaults.marker_chain_name }}"
+
+ExecStartPre=/opt/docker-friendly-firewall/iptables-start-pre.bash
+ExecStart=/opt/docker-friendly-firewall/iptables-start.bash
+ExecStartPost=/opt/docker-friendly-firewall/iptables-start-post.bash
+
+ExecStopPost=/opt/docker-friendly-firewall/iptables-stop.bash
+
+[Install]
+WantedBy=multi-user.target

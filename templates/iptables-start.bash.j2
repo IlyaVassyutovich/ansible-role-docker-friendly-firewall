@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+
+### This file is provisioned by ansible-control ###
+### All changes directly to this file will be reverted ###
+
+set -e
+
+
+iptables -N DFF-STAGE-0
+iptables -I DOCKER-USER --in-interface {{ dff.primary_interface }} -j DFF-STAGE-0
+iptables -I INPUT -j DFF-STAGE-0
+echo "Docker-friendly firewall :: sent INPUT and D-U to stage-0"
+
+
+{% if dff.log_dropped_rejected %}
+echo "Docker-friendly firewall :: logging of dropped and rejected packets ENABLED"
+{% else %}
+echo "Docker-friendly firewall :: logging of dropped and rejected packets DISABLED"
+{% endif %}
+
+
+# Limit icmp's. Counting each sent ping, not only new icmp-connections
+iptables -A DFF-STAGE-0 -p icmp --icmp-type echo-request -m limit --limit 30/min --limit-burst 8 -j ACCEPT
+{% if dff.log_dropped_rejected %}
+iptables -A DFF-STAGE-0 -p icmp --icmp-type echo-request -j LOG --log-prefix "DDF:dropped :: icmp limited "
+{% endif %}
+iptables -A DFF-STAGE-0 -p icmp --icmp-type echo-request -j DROP
+echo "Docker-friendly firewall :: limited ICMP-requests"
+
+# Allowing related and established connections
+iptables -A DFF-STAGE-0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+echo "Docker-friendly firewall :: accepted established connections"
+
+# Accepting loopback connections
+iptables -A DFF-STAGE-0 -i lo -j ACCEPT
+echo "Docker-friendly firewall :: accepted everything from localhost"
+
+# Dropping INVALID
+{% if dff.log_dropped_rejected %}
+iptables -A DFF-STAGE-0 -m conntrack --ctstate INVALID -j LOG --log-prefix "DDF:dropped :: invalid connection "
+{% endif %}
+iptables -A DFF-STAGE-0 -m conntrack --ctstate INVALID -j DROP
+echo "Docker-friendly firewall :: dropped invalid connections"
+
+
+
+# Chains for protocols
+iptables -N DFF-STAGE-1
+iptables -A DFF-STAGE-0 -p udp -m conntrack --ctstate NEW -j DFF-STAGE-1
+iptables -A DFF-STAGE-0 -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j DFF-STAGE-1
+echo "Docker-friendly firewall :: sent new TCP and UDP connections to stage-1"
+
+# Reject TCP connections and UDP streams if the ports are not opened
+{% if dff.log_dropped_rejected %}
+#iptables -A DFF-STAGE-0 -p udp -j LOG --log-prefix "DFF:rejected :: udp "
+{% endif %}
+iptables -A DFF-STAGE-0 -p udp -j REJECT --reject-with icmp-port-unreachable
+{% if dff.log_dropped_rejected %}
+iptables -A DFF-STAGE-0 -p tcp -j LOG --log-prefix "DFF:rejected :: tcp "
+{% endif %}
+iptables -A DFF-STAGE-0 -p tcp -j REJECT --reject-with tcp-reset
+echo "Docker-friendly firewall :: rejected everything in TCP and UDP"
+
+# Reject all remaining protocols - linux default behavior
+{% if dff.log_dropped_rejected %}
+iptables -A DFF-STAGE-0 -j LOG --log-prefix "DFF:rejected :: other "
+{% endif %}
+iptables -A DFF-STAGE-0 -j REJECT --reject-with icmp-proto-unreachable
+echo "Docker-friendly firewall :: rejected everything else"
+
+
+# Stage-1 rules
+{% for rule in dff.rules %}
+iptables -A DFF-STAGE-1 -p {{ rule.proto }} --dport {{ rule.dport }} -j ACCEPT -m comment --comment "{{ rule.name }}"
+{% endfor %}
+echo "Docker-friendly firewall :: configured rules for stage-1"
+
+
+iptables -P INPUT DROP
+echo "Docker-friendly firewall :: dropped everything in INPUT-chain"
