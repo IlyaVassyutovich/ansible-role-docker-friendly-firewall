@@ -1,4 +1,5 @@
 - name: Render DFF-unit file
+  become: true
   ansible.builtin.template:
     src: service.j2
     dest: /etc/systemd/system/docker-friendly-firewall.service
@@ -9,16 +10,19 @@
   register: render_unit
 
 - name: Reload systemd
+  become: true
   ansible.builtin.systemd:
     daemon_reload: true
   when: render_unit.changed
 
 - name: Enable DFF
+  become: true
   ansible.builtin.service:
     name: docker-friendly-firewall.service
     enabled: true
 
 - name: Configure DFF-directory
+  become: true
   ansible.builtin.file:
     path: /opt/docker-friendly-firewall
     state: directory
@@ -27,6 +31,7 @@
     mode: "0555"
 
 - name: Render DFF-scripts
+  become: true
   ansible.builtin.template:
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"
