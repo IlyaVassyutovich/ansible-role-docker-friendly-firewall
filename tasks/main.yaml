@@ -15,5 +15,4 @@
     dff: "{{ dff_defaults | combine(docker.firewall | default({})) }}"
 
 - name: Setup DFF
-  become: true
   ansible.builtin.include_tasks: setup_firewall.yaml
