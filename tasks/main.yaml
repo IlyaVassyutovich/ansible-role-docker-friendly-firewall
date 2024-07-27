@@ -16,4 +16,4 @@
 
 - name: Setup DFF
   become: true
-  include: setup_firewall.yaml
+  ansible.builtin.include_tasks: setup_firewall.yaml
